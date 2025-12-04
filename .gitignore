@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Production builds
+frontend/dist/
+backend/dist/
+
+# Environment files
+.env
+.env.local
+.env.production.local
+
+# Logs
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+Thumbs.db
+.DS_Store
+
+# Vite
+.vite/
+
+# Temporary files
+tmp/
+temp/
