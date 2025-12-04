@@ -65,7 +65,16 @@ setInterval(() => {
   io.emit('realtimeUpdate', realtimeData);
 }, 5000);
 
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (req, res) => {
+  // Add CORS headers explicitly
+  const origin = req.get('Origin');
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  res.json({ status: 'ok', name: 'ViralClipCatch API', time: new Date().toISOString() });
+});
   res.json({ status: 'ok', name: 'ViralClipCatch API', time: new Date().toISOString() });
 });
 
