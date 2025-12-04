@@ -1,0 +1,44 @@
+{
+  "totals": {
+    "download": 522,
+    "visit": 184
+  },
+  "byDate": {
+    "2025-11-03": {
+      "download": 0,
+      "visit": 4
+    },
+    "2025-11-04": {
+      "download": 341,
+      "visit": 6
+    },
+    "2025-11-09": {
+      "download": 169,
+      "visit": 26
+    },
+    "2025-11-18": {
+      "download": 2,
+      "visit": 2
+    },
+    "2025-11-19": {
+      "download": 4,
+      "visit": 6
+    },
+    "2025-11-23": {
+      "download": 1,
+      "visit": 73
+    },
+    "2025-11-28": {
+      "download": 3,
+      "visit": 53
+    },
+    "2025-11-29": {
+      "download": 0,
+      "visit": 10
+    },
+    "2025-11-30": {
+      "download": 2,
+      "visit": 4
+    }
+  }
+}
