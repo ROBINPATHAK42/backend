@@ -5,36 +5,7 @@ import { recordEvent, getSummary, addActiveUser, removeActiveUser, addLiveVisito
 
 const router = Router();
 
-// Add CORS headers to all responses
-router.use((req, res, next) => {
-  const origin = req.get('Origin');
-  if (origin) {
-    res.header('Access-Control-Allow-Origin', origin);
-  }
-  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  
-  // intercept OPTIONS method
-  if ('OPTIONS' === req.method) {
-    res.sendStatus(200);
-  } else {
-    next();
-  }
-});
-
-// Explicitly handle OPTIONS requests for CORS
-router.options('/parse', (req, res) => {
-  console.log('OPTIONS request received for /parse');
-  console.log('Origin header:', req.get('Origin'));
-  res.sendStatus(200);
-});
-
-router.options('/download', (req, res) => {
-  console.log('OPTIONS request received for /download');
-  console.log('Origin header:', req.get('Origin'));
-  res.sendStatus(200);
-});
+// Remove manual CORS handling since we're handling it globally in server.js
 
 router.post('/parse', async (req, res) => {
   try {
