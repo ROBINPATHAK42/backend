@@ -153,4 +153,15 @@ router.get('/analytics/realtime', (_req, res) => {
   res.json(getRealtimeSummary());
 });
 
-export default router;
+export default router;// Explicitly handle OPTIONS requests for CORS
+router.options('/parse', (req, res) => {
+  console.log('OPTIONS request received for /parse');
+  console.log('Origin header:', req.get('Origin'));
+  res.sendStatus(204);
+});
+
+router.options('/download', (req, res) => {
+  console.log('OPTIONS request received for /download');
+  console.log('Origin header:', req.get('Origin'));
+  res.sendStatus(204);
+});
