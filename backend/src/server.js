@@ -15,18 +15,29 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Configure CORS with explicit origins for better debugging
+const corsOrigins = process.env.CORS_ORIGIN 
+  ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
+  : ['http://localhost:5173', 'http://localhost:5174', 'https://viralclipcatch.netlify.app'];
+
+console.log('CORS Origins configured:', corsOrigins);
+
 const app = express();
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || true,
-    methods: ["GET", "POST"]
+    origin: corsOrigins,
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 const PORT = process.env.PORT || 5000;
 
-app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || true }));
+app.use(cors({ 
+  origin: corsOrigins,
+  credentials: true
+}));
 app.use(express.json({ limit: '2mb' }));
 app.use(morgan('dev'));
 
@@ -101,20 +112,23 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🔧 Environment:`);
   console.log(`   PORT: ${PORT}`);
   console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
+  console.log(`   CORS Origins: ${corsOrigins.join(', ')}`);
   console.log('========================================');
-});// Handle server errors
+});
+
+// Handle server errors
 server.on('error', (err) => {
-  console.error('? Server error:', err.message);
+  console.error('❌ Server error:', err.message);
   console.error('Stack:', err.stack);
 });
 
 // Global error handlers
 process.on('uncaughtException', (err) => {
-  console.error('? Uncaught Exception:', err);
+  console.error('❌ Uncaught Exception:', err);
   console.error('Stack trace:', err.stack);
   // Don't exit in production, just log the error
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('? Unhandled Rejection at:', promise, 'reason:', reason);
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
