@@ -143,3 +143,21 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
 });
+// Test CORS endpoint
+app.get('/api/test-cors', (req, res) => {
+  console.log('Test CORS endpoint called');
+  console.log('Origin header:', req.get(''Origin''));
+  
+  // Always set CORS headers
+  res.header(''Access-Control-Allow-Origin'', req.get(''Origin'') || ''*'');
+  res.header(''Access-Control-Allow-Credentials'', ''true'');
+  res.header(''Access-Control-Allow-Methods'', ''GET,PUT,POST,DELETE,OPTIONS'');
+  res.header(''Access-Control-Allow-Headers'', ''Content-Type, Authorization, X-Requested-With'');
+  
+  res.json({ 
+    status: ''ok'', 
+    message: ''CORS test endpoint'', 
+    origin: req.get(''Origin''),
+    headers: req.headers
+  });
+});
