@@ -1,42 +1,67 @@
 import { Router } from 'express';
 import { parseUrl, getYoutubeFormats, streamYoutube } from '../services/youtube.js';
 import { getYoutubeFormatsYtDlp, streamYoutubeYtDlp } from '../services/ytdlp.js';
-import { recordEvent, getSummary, addActiveUser, removeActiveUser, addLiveVisitor, removeLiveVisitor, incrementTodayDownloads, getRealtimeSummary } from '../services/analytics.js';
+import { recordEvent, getSummary, addActiveUser, removeActiveUser, addLiveVisitor, removeLiveVisitor, getRealtimeSummary } from '../services/analytics.js';
 
 const router = Router();
 
+// Add CORS headers to all responses
+router.use((req, res, next) => {
+  const origin = req.get('Origin');
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  // intercept OPTIONS method
+  if ('OPTIONS' === req.method) {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// Explicitly handle OPTIONS requests for CORS
+router.options('/parse', (req, res) => {
+  console.log('OPTIONS request received for /parse');
+  console.log('Origin header:', req.get('Origin'));
+  res.sendStatus(200);
+});
+
+router.options('/download', (req, res) => {
+  console.log('OPTIONS request received for /download');
+  console.log('Origin header:', req.get('Origin'));
+  res.sendStatus(200);
+});
+
 router.post('/parse', async (req, res) => {
   try {
-    console.log('Received request body:', JSON.stringify(req.body, null, 2));
-    console.log('Request headers:', JSON.stringify(req.headers, null, 2));
-    
     const { url } = req.body || {};
     
-    console.log('Extracted URL:', url);
-    
-    if (!url || !url.trim()) {
-      return res.status(400).json({ error: 'Please provide a valid URL' });
+    if (!url) {
+      return res.status(400).json({ error: 'URL is required' });
     }
     
-    console.log('Parsing URL:', url);
-    const info = await parseUrl(url);
+    console.log(`Parsing URL: ${url}`);
     
+    // Validate and identify platform
+    const info = parseUrl(url);
     if (!info.supported) {
-      const platformMsg = info.platform !== 'unknown' 
-        ? `${info.platform} is not supported yet` 
-        : 'This platform is not supported yet';
       return res.status(400).json({ 
-        error: platformMsg, 
-        platform: info.platform 
+        error: `Unsupported platform. Supported platforms: YouTube, TikTok, Instagram, Facebook, Twitter/X, Reddit.`,
+        platform: info.platform
       });
     }
     
-    console.log('Fetching formats for:', info.platform);
+    console.log(`Platform identified: ${info.platform}`);
+    
+    let data;
     
     // Try yt-dlp first (more reliable), fallback to ytdl-core
-    let data;
     try {
-      console.log('Trying yt-dlp...');
+      console.log('Attempting to fetch with yt-dlp...');
       data = await getYoutubeFormatsYtDlp(url);
       console.log(`yt-dlp: Found ${data.formats?.length || 0} video formats and ${data.audio?.length || 0} audio formats`);
     } catch (ytdlpError) {
@@ -153,15 +178,4 @@ router.get('/analytics/realtime', (_req, res) => {
   res.json(getRealtimeSummary());
 });
 
-export default router;// Explicitly handle OPTIONS requests for CORS
-router.options('/parse', (req, res) => {
-  console.log('OPTIONS request received for /parse');
-  console.log('Origin header:', req.get('Origin'));
-  res.sendStatus(204);
-});
-
-router.options('/download', (req, res) => {
-  console.log('OPTIONS request received for /download');
-  console.log('Origin header:', req.get('Origin'));
-  res.sendStatus(204);
-});
+export default router;
