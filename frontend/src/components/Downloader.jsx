@@ -45,16 +45,30 @@ export default function Downloader() {
       console.log('✅ Parse successful:', res.data)
       setData(res.data)
       setType('video')
+      
+      // Record the parse event
+      try {
+        await api.post('/analytics/event', { type: 'parse' })
+      } catch (analyticsErr) {
+        console.warn('Failed to record parse event:', analyticsErr)
+      }
     } catch (e) {
       console.error('💥 API Error:', e)
       console.error('📝 Error response:', e?.response)
       console.error('📄 Error response data:', e?.response?.data)
       console.error('🔢 Error status:', e?.response?.status)
       
-      const errorMessage = e?.response?.data?.error || 
+      let errorMessage = e?.response?.data?.error || 
                           e?.response?.data?.message || 
                           e?.message || 
                           'Failed to parse URL. Please check the URL and try again.'
+      
+      // Provide more specific guidance for YouTube bot detection
+      if (e?.response?.data?.botDetection) {
+        errorMessage = e.response.data.error;
+      } else if (errorMessage.includes('Sign in to confirm you')) {
+        errorMessage = 'YouTube is requiring authentication for this video. This commonly happens with popular videos that trigger bot detection. Please try:\n1. Using a different video URL\n2. Waiting a few minutes and trying again\n3. Checking if the video is publicly accessible';
+      }
       
       setData(null)
       setError(errorMessage)
@@ -125,7 +139,14 @@ export default function Downloader() {
         </div>
         {error && (
           <div className="mt-3 p-3 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-800">
-            <p className="text-red-800 dark:text-red-200 text-sm font-medium">⚠️ {error}</p>
+            <p className="text-red-800 dark:text-red-200 text-sm font-medium">
+              ⚠️ {error.split('\n').map((line, i) => (
+                <span key={i}>
+                  {line}
+                  <br />
+                </span>
+              ))}
+            </p>
           </div>
         )}
       </div>

@@ -38,6 +38,20 @@ router.post('/parse', async (req, res) => {
     } catch (ytdlpError) {
       console.warn('yt-dlp failed:', ytdlpError.message);
       
+      // Special handling for YouTube bot detection
+      if (info.platform === 'youtube' && ytdlpError.message.includes('Sign in to confirm you')) {
+        return res.status(400).json({ 
+          error: `YouTube is requiring authentication for this video. This commonly happens with popular videos that trigger bot detection.
+
+Please try:
+1. Using a different video URL
+2. Waiting a few minutes and trying again
+3. Checking if the video is publicly accessible`,
+          platform: info.platform,
+          botDetection: true
+        });
+      }
+      
       // Only fallback to ytdl-core for YouTube
       if (info.platform === 'youtube') {
         console.log('Falling back to ytdl-core for YouTube...');
@@ -46,6 +60,21 @@ router.post('/parse', async (req, res) => {
           console.log(`ytdl-core: Found ${data.formats?.length || 0} video formats and ${data.audio?.length || 0} audio formats`);
         } catch (ytdlError) {
           console.error('Both yt-dlp and ytdl-core failed:', ytdlError.message);
+          
+          // Special handling for YouTube bot detection in ytdl-core as well
+          if (ytdlError.message.includes('Sign in to confirm you')) {
+            return res.status(400).json({ 
+              error: `YouTube is requiring authentication for this video. This commonly happens with popular videos that trigger bot detection.
+
+Please try:
+1. Using a different video URL
+2. Waiting a few minutes and trying again
+3. Checking if the video is publicly accessible`,
+              platform: info.platform,
+              botDetection: true
+            });
+          }
+          
           throw new Error(`Failed to fetch video. ${ytdlpError.message}`);
         }
       } else {

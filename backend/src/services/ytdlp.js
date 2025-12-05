@@ -4,8 +4,16 @@ import { exec } from 'child_process';
 import path from 'path';
 import fs from 'fs-extra';
 import { nanoid } from 'nanoid';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const execAsync = promisify(exec);
+
+// Path to cookies file
+const COOKIES_PATH = path.join(__dirname, '../data/cookies.txt');
 
 /**
  * Get yt-dlp command
@@ -62,18 +70,34 @@ export async function getYoutubeFormatsYtDlp(url) {
       '--dump-json',
       '--no-warnings',
       '--no-playlist',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      url
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     ];
+    
+    // Add cookies if available
+    if (fs.existsSync(COOKIES_PATH)) {
+      cmdArgs.push('--cookies', COOKIES_PATH);
+      console.log('Using cookies for authentication');
+    }
+    
+    // Add the URL
+    cmdArgs.push(url);
     
     // Execute command
     let fullCommand;
     if (args.length > 0) {
       // Python module: python -m yt_dlp
-      fullCommand = `"${command}" ${args.join(' ')} --dump-json --no-warnings --no-playlist --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" "${url}"`;
+      fullCommand = `"${command}" ${args.join(' ')} --dump-json --no-warnings --no-playlist --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"`;
+      if (fs.existsSync(COOKIES_PATH)) {
+        fullCommand += ` --cookies "${COOKIES_PATH}"`;
+      }
+      fullCommand += ` "${url}"`;
     } else {
       // Direct executable
-      fullCommand = `"${command}" --dump-json --no-warnings --no-playlist --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" "${url}"`;
+      fullCommand = `"${command}" --dump-json --no-warnings --no-playlist --user-agent "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"`;
+      if (fs.existsSync(COOKIES_PATH)) {
+        fullCommand += ` --cookies "${COOKIES_PATH}"`;
+      }
+      fullCommand += ` "${url}"`;
     }
     
     console.log('Executing yt-dlp command for URL:', url);
@@ -144,6 +168,8 @@ export async function getYoutubeFormatsYtDlp(url) {
       errorMessage = 'Video not found (404). The URL may be incorrect or the video was removed.';
     } else if (err.message.includes('HTTP Error 403')) {
       errorMessage = 'Access forbidden (403). The video may be private or age-restricted.';
+    } else if (err.message.includes('Sign in to confirm you')) {
+      errorMessage = 'YouTube requires authentication for this video. This commonly happens with popular videos that trigger bot detection. Please try:\n1. Using a different video URL\n2. Waiting a few minutes and trying again\n3. Checking if the video is publicly accessible';
     }
     
     throw new Error(`Failed to fetch video information: ${errorMessage}`);
@@ -196,75 +222,56 @@ export async function streamYoutubeYtDlp({ url, itag, type }, res) {
       '--no-warnings',
       '--no-playlist',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      '--referer', url,
-      '-o', '-',  // Output to stdout
-      url
+      '--referer', url
     ];
     
-    // Add audio extraction if type is audio
-    if (type === 'audio') {
-      downloadArgs.splice(baseArgs.length, 0, '-x', '--audio-format', 'mp3');
+    // Add cookies if available
+    if (fs.existsSync(COOKIES_PATH)) {
+      downloadArgs.push('--cookies', COOKIES_PATH);
     }
     
-    console.log(`Starting yt-dlp download: ${command} ${downloadArgs.join(' ')}`);
+    downloadArgs.push('-o', '-', url); // Output to stdout
     
-    // Spawn yt-dlp process
-    const ytdlp = spawn(command, downloadArgs);
+    console.log('Streaming video with command:', `"${command}" ${downloadArgs.join(' ')}`);
     
-    let downloadedBytes = 0;
-    
-    // Pipe stdout to response
-    ytdlp.stdout.on('data', (chunk) => {
-      downloadedBytes += chunk.length;
-      res.write(chunk);
+    // Spawn the yt-dlp process
+    const ytDlp = spawn(command, downloadArgs, {
+      stdio: ['ignore', 'pipe', 'pipe']
     });
     
-    // Log errors from stderr (yt-dlp uses stderr for progress)
-    ytdlp.stderr.on('data', (data) => {
-      const message = data.toString();
-      // Only log actual errors, not progress
-      if (message.includes('ERROR') || message.includes('error')) {
-        console.error('yt-dlp stderr:', message);
-      }
-    });
-    
-    // Handle process completion
-    ytdlp.on('close', (code) => {
-      if (code === 0) {
-        console.log(`Download completed. Total bytes: ${downloadedBytes}`);
-        res.end();
-      } else {
-        console.error(`yt-dlp exited with code ${code}`);
-        if (!res.headersSent) {
-          res.status(500).json({ error: 'Download failed' });
-        } else {
-          res.end();
-        }
-      }
-    });
+    // Pipe the video stream to the response
+    ytDlp.stdout.pipe(res);
     
     // Handle errors
-    ytdlp.on('error', (err) => {
-      console.error('yt-dlp process error:', err.message);
+    ytDlp.stderr.on('data', (data) => {
+      console.error('yt-dlp stderr:', data.toString());
+    });
+    
+    ytDlp.on('error', (err) => {
+      console.error('yt-dlp process error:', err);
       if (!res.headersSent) {
-        res.status(500).json({ error: 'Failed to start download process' });
-      } else {
-        res.end();
+        res.status(500).json({ error: 'Download failed: ' + err.message });
+      }
+    });
+    
+    ytDlp.on('close', (code) => {
+      console.log('yt-dlp process exited with code:', code);
+      if (code !== 0 && !res.headersSent) {
+        res.status(500).json({ error: 'Download failed with exit code: ' + code });
       }
     });
     
     // Handle client disconnect
     res.on('close', () => {
-      if (ytdlp && !ytdlp.killed) {
-        console.log('Client disconnected, killing yt-dlp process');
-        ytdlp.kill();
+      if (!ytDlp.killed) {
+        ytDlp.kill();
       }
     });
     
   } catch (err) {
-    console.error('Error streaming with yt-dlp:', err.message);
+    console.error('Stream error:', err);
     if (!res.headersSent) {
-      res.status(500).json({ error: err.message });
+      res.status(500).json({ error: 'Download failed: ' + err.message });
     }
   }
 }

@@ -1,0 +1,6 @@
+# Netscape HTTP Cookie File
+# This is a sample cookie file for YouTube authentication
+# To use real cookies, export them from your browser using yt-dlp:
+# yt-dlp --cookies-from-browser chrome https://www.youtube.com/
+
+.youtube.com	TRUE	/	FALSE	2147483647	PREF	f2=8000000

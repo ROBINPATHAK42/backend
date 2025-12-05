@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ViralClipCatch Comprehensive Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border-radius: 8px; }
+        .success { background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .pending { background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        button { padding: 10px 15px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        pre { background-color: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>ViralClipCatch Comprehensive Test</h1>
+    
+    <div class="test-section pending" id="corsTest">
+        <h3>CORS Configuration Test</h3>
+        <button onclick="testCORS()">Test CORS</button>
+        <div id="corsResults"></div>
+    </div>
+    
+    <div class="test-section pending" id="apiTest">
+        <h3>API Connectivity Test</h3>
+        <button onclick="testAPI()">Test API</button>
+        <div id="apiResults"></div>
+    </div>
+    
+    <div class="test-section pending" id="parseTest">
+        <h3>Video Parsing Test</h3>
+        <button onclick="testParse()">Test Video Parse</button>
+        <div id="parseResults"></div>
+    </div>
+    
+    <div class="test-section pending" id="analyticsTest">
+        <h3>Analytics Test</h3>
+        <button onclick="testAnalytics()">Test Analytics</button>
+        <div id="analyticsResults"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'https://videodownloader-api-bfyj.onrender.com/api';
+        const TEST_VIDEO_URL = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'; // Rick Astley
+        
+        function updateTestSection(sectionId, status, content = '') {
+            const section = document.getElementById(sectionId);
+            section.className = `test-section ${status}`;
+            if (content) {
+                const resultsDiv = document.getElementById(`${sectionId}Results`);
+                resultsDiv.innerHTML = content;
+            }
+        }
+        
+        async function testCORS() {
+            updateTestSection('corsTest', 'pending', '<p>Testing CORS configuration...</p>');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/test-cors`, {
+                    method: 'GET',
+                    headers: {
+                        'Origin': 'https://viralclipcatch.netlify.app'
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateTestSection('corsTest', 'success', `
+                        <p><strong>✅ CORS Test Passed</strong></p>
+                        <p>Origin: ${data.origin}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateTestSection('corsTest', 'error', `
+                    <p><strong>❌ CORS Test Failed</strong></p>
+                    <p>Error: ${error.message}</p>
+                `);
+            }
+        }
+        
+        async function testAPI() {
+            updateTestSection('apiTest', 'pending', '<p>Testing API connectivity...</p>');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateTestSection('apiTest', 'success', `
+                        <p><strong>✅ API Connectivity Test Passed</strong></p>
+                        <p>Status: ${data.status}</p>
+                        <p>Name: ${data.name}</p>
+                        <p>Time: ${data.time}</p>
+                    `);
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                updateTestSection('apiTest', 'error', `
+                    <p><strong>❌ API Connectivity Test Failed</strong></p>
+                    <p>Error: ${error.message}</p>
+                `);
+            }
+        }
+        
+        async function testParse() {
+            updateTestSection('parseTest', 'pending', '<p>Testing video parsing...</p>');
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/parse`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Origin': 'https://viralclipcatch.netlify.app'
+                    },
+                    body: JSON.stringify({
+                        url: TEST_VIDEO_URL
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    updateTestSection('parseTest', 'success', `
+                        <p><strong>✅ Video Parsing Test Passed</strong></p>
+                        <p>Title: ${data.title}</p>
+                        <p>Platform: ${data.platform}</p>
+                        <p>Video formats: ${data.formats?.length || 0}</p>
+                        <p>Audio formats: ${data.audio?.length || 0}</p>
+                        <details>
+                            <summary>View raw data</summary>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </details>
+                    `);
+                } else {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+            } catch (error) {
+                updateTestSection('parseTest', 'error', `
+                    <p><strong>❌ Video Parsing Test Failed</strong></p>
+                    <p>Error: ${error.message}</p>
+                `);
+            }
+        }
+        
+        async function testAnalytics() {
+            updateTestSection('analyticsTest', 'pending', '<p>Testing analytics...</p>');
+            
+            try {
+                // Test summary endpoint
+                const summaryResponse = await fetch(`${API_BASE_URL}/analytics/summary`, {
+                    headers: {
+                        'Origin': 'https://viralclipcatch.netlify.app'
+                    }
+                });
+                
+                if (summaryResponse.ok) {
+                    const summaryData = await summaryResponse.json();
+                    
+                    // Test event recording
+                    const eventResponse = await fetch(`${API_BASE_URL}/analytics/event`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Origin': 'https://viralclipcatch.netlify.app'
+                        },
+                        body: JSON.stringify({
+                            type: 'test'
+                        })
+                    });
+                    
+                    let eventData = null;
+                    if (eventResponse.ok) {
+                        eventData = await eventResponse.json();
+                    }
+                    
+                    updateTestSection('analyticsTest', 'success', `
+                        <p><strong>✅ Analytics Test Passed</strong></p>
+                        <p>Active Users: ${summaryData.activeUsers}</p>
+                        <p>Live Visitors: ${summaryData.liveVisitors}</p>
+                        <p>Today's Downloads: ${summaryData.today?.download || 0}</p>
+                        <details>
+                            <summary>View raw data</summary>
+                            <p>Summary:</p>
+                            <pre>${JSON.stringify(summaryData, null, 2)}</pre>
+                            ${eventData ? `<p>Event Response:</p><pre>${JSON.stringify(eventData, null, 2)}</pre>` : ''}
+                        </details>
+                    `);
+                } else {
+                    const errorText = await summaryResponse.text();
+                    throw new Error(`HTTP ${summaryResponse.status}: ${errorText}`);
+                }
+            } catch (error) {
+                updateTestSection('analyticsTest', 'error', `
+                    <p><strong>❌ Analytics Test Failed</strong></p>
+                    <p>Error: ${error.message}</p>
+                `);
+            }
+        }
+    </script>
+</body>
+</html>

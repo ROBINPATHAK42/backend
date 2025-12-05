@@ -18,12 +18,32 @@ const __dirname = path.dirname(__filename);
 // Configure CORS with explicit origins and credentials
 const corsOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['http://localhost:5173', 'http://localhost:5174', 'https://viralclipcatch.netlify.app'];
+  : [
+      'http://localhost:5173', 
+      'http://localhost:5174', 
+      'https://viralclipcatch.netlify.app',
+      'https://viralclipcatch.com'
+    ];
 
-console.log('CORS Origins configured:', corsOrigins);
+// Clean up any malformed origins (in case of environment variable issues)
+const cleanCorsOrigins = corsOrigins.map(origin => origin.split('\n')[0].trim()).filter(Boolean);
+
+console.log('CORS Origins configured:', cleanCorsOrigins);
 
 const corsOptions = {
-  origin: corsOrigins,
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if the origin is in our allowed list
+    if (cleanCorsOrigins.some(allowedOrigin => origin.startsWith(allowedOrigin))) {
+      return callback(null, true);
+    }
+    
+    // For development, log the origin for debugging
+    console.log('CORS blocked origin:', origin);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   optionsSuccessStatus: 200 // Some legacy browsers choke on 204
 };
@@ -60,11 +80,11 @@ io.on('connection', (socket) => {
   });
 });
 
-// Broadcast real-time updates every 5 seconds
+// Broadcast real-time updates every 3 seconds (increased frequency for better responsiveness)
 setInterval(() => {
   const realtimeData = getRealtimeSummary();
   io.emit('realtimeUpdate', realtimeData);
-}, 5000);
+}, 3000);
 
 app.get('/api/health', (req, res) => {
   // Add CORS headers explicitly

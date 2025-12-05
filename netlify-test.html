@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Browser Test</title>
+    <title>Netlify CORS Test</title>
 </head>
 <body>
-    <h1>Frontend-Backend Connection Test</h1>
-    <button onclick="testConnection()">Test Connection</button>
+    <h1>Netlify CORS Test for ViralClipCatch</h1>
+    <button onclick="testApi()">Test API Connection</button>
     <div id="results"></div>
 
     <script>
-        async function testConnection() {
+        async function testApi() {
             const results = document.getElementById('results');
-            results.innerHTML = '<p>Testing...</p>';
+            results.innerHTML = '<p>Testing API connection...</p>';
             
             try {
                 // Test 1: Health check
@@ -38,6 +38,17 @@
                 } else {
                     const errorText = await parseResponse.text();
                     results.innerHTML += `<p style="color: red;">✗ Parse failed: ${parseResponse.status} - ${errorText}</p>`;
+                }
+                
+                // Test 3: Analytics
+                results.innerHTML += '<p>3. Testing analytics...</p>';
+                const analyticsResponse = await fetch('https://videodownloader-api-bfyj.onrender.com/api/analytics/summary');
+                if (analyticsResponse.ok) {
+                    const analyticsData = await analyticsResponse.json();
+                    results.innerHTML += `<p style="color: green;">✓ Analytics successful: ${analyticsData.activeUsers} active users</p>`;
+                } else {
+                    const errorText = await analyticsResponse.text();
+                    results.innerHTML += `<p style="color: red;">✗ Analytics failed: ${analyticsResponse.status} - ${errorText}</p>`;
                 }
             } catch (error) {
                 results.innerHTML += `<p style="color: red;">✗ Error: ${error.message}</p>`;

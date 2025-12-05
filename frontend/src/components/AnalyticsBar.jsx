@@ -8,6 +8,7 @@ export default function AnalyticsBar() {
   const [error, setError] = useState(null)
   const socketRef = useRef(null)
   const sessionIdRef = useRef(null)
+  const retryTimeoutRef = useRef(null)
 
   // Generate a unique session ID
   useEffect(() => {
@@ -48,6 +49,14 @@ export default function AnalyticsBar() {
                           'Failed to load analytics data'
       
       setError(errorMessage)
+      
+      // Retry after 5 seconds if there was an error
+      if (!retryTimeoutRef.current) {
+        retryTimeoutRef.current = setTimeout(() => {
+          retryTimeoutRef.current = null
+          fetchSummary()
+        }, 5000)
+      }
     } finally {
       setLoading(false)
     }
@@ -96,16 +105,25 @@ export default function AnalyticsBar() {
   // Setup WebSocket connection for real-time updates
   const setupWebSocket = () => {
     // Extract base URL without /api path for WebSocket connection
-    const apiUrl = api.defaults.baseURL || 'http://localhost:5000';
-    const baseUrl = apiUrl.replace('/api', '');
+    const apiUrl = api.defaults.baseURL || '';
+    let wsUrl;
+    
+    if (apiUrl.includes('localhost')) {
+      // For local development
+      wsUrl = apiUrl.replace('/api', '').replace('http://', 'ws://').replace('https://', 'wss://');
+    } else {
+      // For production, construct WebSocket URL from API URL
+      // Convert HTTPS to WSS, HTTP to WS
+      wsUrl = apiUrl.replace('/api', '').replace('http://', 'ws://').replace('https://', 'wss://');
+    }
+    
+    console.log('WebSocket connection URL:', wsUrl);
     
     // Create WebSocket connection
-    const socket = io(
-      baseUrl,
-      {
-        transports: ['websocket', 'polling']
-      }
-    );
+    const socket = io(wsUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true
+    });
     
     socketRef.current = socket;
     
@@ -148,6 +166,12 @@ export default function AnalyticsBar() {
       cleanupWebSocket()
       removeActiveUser()
       removeLiveVisitor()
+      
+      // Clear any pending retries
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current)
+        retryTimeoutRef.current = null
+      }
     }
   }, [])
 
